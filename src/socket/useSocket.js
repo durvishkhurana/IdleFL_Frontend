@@ -15,7 +15,10 @@ export function useSocket() {
 
     // Connect and authenticate
     socket.connect()
-    socket.emit('authenticate', { token })
+    socket.on('connect', () => {
+      socket.emit('authenticate', { token })
+    })
+    
 
     function onConnect() { setIsConnected(true) }
     function onDisconnect() { setIsConnected(false) }

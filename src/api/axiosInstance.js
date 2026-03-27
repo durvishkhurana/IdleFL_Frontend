@@ -3,10 +3,11 @@ import useAuthStore from '../store/authStore'
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:4000',
-  timeout: 15000,
+  timeout: 30000,
+  withCredentials: true,
 })
 
-// Attach JWT token to every request
+// Attach JWT token
 api.interceptors.request.use((config) => {
   const token = useAuthStore.getState().token
   if (token) {
@@ -15,7 +16,7 @@ api.interceptors.request.use((config) => {
   return config
 })
 
-// Handle 401 globally → auto-logout
+// Handle 401
 api.interceptors.response.use(
   (response) => response,
   (error) => {
