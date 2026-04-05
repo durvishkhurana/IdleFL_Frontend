@@ -23,8 +23,16 @@ export function useSocket() {
     function onConnect() { setIsConnected(true) }
     function onDisconnect() { setIsConnected(false) }
 
-    function onDeviceJoined(device) {
-      addDevice({ ...device, status: 'active' })
+    function onDeviceJoined(data) {
+      const device = data.device ?? data
+      addDevice({
+        deviceId: device.id,
+        deviceName: device.deviceName,
+        os: device.os,
+        computeType: device.computeType,
+        computeScore: device.computeScore,
+        status: 'active',
+      })
     }
 
     function onDeviceUpdated(data) {
@@ -32,7 +40,8 @@ export function useSocket() {
     }
 
     function onDeviceDropped(data) {
-      removeDevice(data.deviceId)
+      const deviceId = data.deviceId ?? data.device?.id ?? data.id
+      if (deviceId) removeDevice(deviceId)
     }
 
     function onRoundComplete(data) {
@@ -72,7 +81,7 @@ export function useSocket() {
     socket.on('disconnect', onDisconnect)
     socket.on('device:joined', onDeviceJoined)
     socket.on('device:status_update', onDeviceUpdated)
-    socket.on('device:dropped', onDeviceDropped)
+    socket.on('device:disconnected', onDeviceDropped)
     socket.on('training:round_complete', onRoundComplete)
     socket.on('training:complete', onTrainingComplete)
     socket.on('training:started', onTrainingStarted)
@@ -86,7 +95,7 @@ export function useSocket() {
       socket.off('disconnect', onDisconnect)
       socket.off('device:joined', onDeviceJoined)
       socket.off('device:status_update', onDeviceUpdated)
-      socket.off('device:dropped', onDeviceDropped)
+      socket.off('device:disconnected', onDeviceDropped)
       socket.off('training:round_complete', onRoundComplete)
       socket.off('training:complete', onTrainingComplete)
       socket.off('training:started', onTrainingStarted)
