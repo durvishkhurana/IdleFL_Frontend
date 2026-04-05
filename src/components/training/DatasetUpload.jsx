@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import clsx from 'clsx'
 import { formatBytes } from '../../utils/formatters'
 
-export default function DatasetUpload({ onUpload, modelType, className = '' }) {
+export default function DatasetUpload({ onFileReady, modelType, className = '' }) {
   const [dragging, setDragging] = useState(false)
   const [file, setFile] = useState(null)
   const [uploading, setUploading] = useState(false)
@@ -22,16 +22,14 @@ export default function DatasetUpload({ onUpload, modelType, className = '' }) {
     setFile(f)
     setUploading(true)
     try {
-      const formData = new FormData()
-      formData.append('dataset', f)
-      await onUpload(formData)
+      await Promise.resolve(onFileReady?.(f))
       setUploaded(true)
     } catch (e) {
       setError(e?.message || 'Upload failed')
     } finally {
       setUploading(false)
     }
-  }, [acceptedExt, acceptedDesc, onUpload])
+  }, [acceptedExt, acceptedDesc, onFileReady])
 
   const onDrop = (e) => {
     e.preventDefault()

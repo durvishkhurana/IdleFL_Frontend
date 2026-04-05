@@ -112,33 +112,45 @@ export default function TrainingPage() {
   const navigate = useNavigate()
   useSocket()
 
-  const { job, uploadDataset, startTraining, resetJob, error: trainingError } = useTraining()
+  const { job, startTraining, resetJob, error: trainingError, setError: setTrainingError } = useTraining()
   const { devices, hasMajorityCpuOnly } = useDevices()
   const { sessionId } = useSessionStore()
   const { startMock, mockRunning } = useMockTraining()
 
   const [modelType, setModelType] = useState('LINEAR_REGRESSION')
   const [config, setConfig] = useState({ learningRate: 0.01, numRounds: 10, batchSize: 32 })
+  const [datasetFile, setDatasetFile] = useState(null)
   const [datasetUploaded, setDatasetUploaded] = useState(false)
   const [startLoading, setStartLoading] = useState(false)
   const [showStickyBar, setShowStickyBar] = useState(false)
   const [modelDownloadLoading, setModelDownloadLoading] = useState(false)
   const [modelDownloadError, setModelDownloadError] = useState(null)
 
-  // Show sticky bar when dataset uploaded
+  // Show sticky bar when dataset selected (or demo mode)
   useEffect(() => {
-    setShowStickyBar(datasetUploaded)
+    setShowStickyBar(datasetUploaded || DEMO_MODE)
   }, [datasetUploaded])
 
-  const handleUpload = async (formData) => {
-    const res = await uploadDataset(formData)
+  useEffect(() => {
+    if (DEMO_MODE) setDatasetUploaded(true)
+  }, [])
+
+  useEffect(() => {
+    if (DEMO_MODE) return
+    setDatasetFile(null)
+    setDatasetUploaded(false)
+  }, [modelType])
+
+  const handleFileReady = (file) => {
+    setDatasetFile(file)
     setDatasetUploaded(true)
   }
 
   const handleStart = async () => {
     setStartLoading(true)
-    const res = await startTraining({ modelType, config })
-    if (!res.success) {
+    setTrainingError(null)
+    const res = await startTraining({ modelType, config, datasetFile })
+    if (!res.success && !res.validationFailed) {
       const { startJob } = useJobStore.getState()
       startJob(`JOB-${Date.now()}`, modelType, config.numRounds)
       startMock(config.numRounds)
@@ -301,7 +313,7 @@ export default function TrainingPage() {
               style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
             >
               <h3 className="text-xs font-bold text-white font-mono mb-4">1. Upload Dataset</h3>
-              <DatasetUpload onUpload={handleUpload} modelType={modelType} />
+              <DatasetUpload key={modelType} onFileReady={handleFileReady} modelType={modelType} />
             </div>
 
             <div
