@@ -1,11 +1,17 @@
 import { useState } from 'react'
+import useAuthStore from '../../store/authStore'
+import useSessionStore from '../../store/sessionStore'
 
-export default function ScriptDownload({ sessionId, userId }) {
+export default function ScriptDownload({ userId }) {
   const [copied, setCopied] = useState(false)
   const [downloading, setDownloading] = useState(null)
+  const [error, setError] = useState(null)
+
+  const token = useAuthStore((s) => s.token)
+  const sessionCode = useSessionStore((s) => s.sessionCode)
 
   const uid = userId || '{YOUR_USER_ID}'
-  const sid = sessionId || 'FL-XXXX'
+  const sid = sessionCode || 'FL-XXXX'
 
   const codeText = `USER_ID    = "${uid}"\nSESSION_ID = "${sid}"`
 
@@ -18,17 +24,23 @@ export default function ScriptDownload({ sessionId, userId }) {
 
   const handleDownload = async (os) => {
     setDownloading(os)
+    setError(null)
     try {
       const url = `${import.meta.env.VITE_API_URL || 'http://localhost:4000'}/api/agent/script?os=${os}`
-      const res = await fetch(url)
+      const res = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
       if (!res.ok) throw new Error()
       const blob = await res.blob()
       const a = document.createElement('a')
       a.href = URL.createObjectURL(blob)
       a.download = os === 'windows' ? 'idlefl_agent.py' : 'idlefl_agent.sh'
       a.click()
-    } catch {
-      // Silently fail — script download needs backend
+    } catch (err) {
+      console.error('Script download failed:', err)
+      setError('Failed to download script. Please try again.')
     } finally {
       setDownloading(null)
     }
@@ -68,6 +80,12 @@ export default function ScriptDownload({ sessionId, userId }) {
           </button>
         ))}
       </div>
+
+      {error && (
+        <p className="text-xs mb-3 font-mono" style={{ color: '#ff4444' }}>
+          {error}
+        </p>
+      )}
 
       {/* Code editor preview */}
       <div className="rounded overflow-hidden" style={{ border: '1px solid rgba(255,107,107,0.1)' }}>

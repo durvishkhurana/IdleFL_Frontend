@@ -16,7 +16,7 @@ import { DEMO_MODE, DEMO_DEVICES } from '../utils/demoMode'
 
 export default function SessionPage() {
   const navigate = useNavigate()
-  const { sessionId, setSession, addDevice } = useSessionStore()
+  const { sessionId, sessionCode, setSession, addDevice } = useSessionStore()
   const { user } = useAuthStore()
   const { devices, hasMajorityCpuOnly, hasGpuDevice } = useDevices()
   useSocket()
@@ -63,11 +63,12 @@ export default function SessionPage() {
     setError(null)
     try {
       const res = await createSession()
-      const newId = res.data.session.sessionCode
-      setCreatedSessionId(newId)
+      const newCode = res.data.session.sessionCode
+      const dbSessionId = res.data.session.id
+      setCreatedSessionId(newCode)
       // Auto-join: no need for the user to manually enter and submit
-      try { await joinSession(newId) } catch { /* best-effort */ }
-      setSession(newId)
+      try { await joinSession(newCode) } catch { /* best-effort */ }
+      setSession(dbSessionId, newCode)
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Failed to create session')
     } finally {
@@ -80,10 +81,12 @@ export default function SessionPage() {
     setJoining(true)
     setError(null)
     try {
-      await joinSession(joinId.trim())
-      setSession(joinId.trim())
-    } catch {
-      setSession(joinId.trim())
+      const res = await joinSession(joinId.trim())
+      const realSessionId = res?.data?.session?.id ?? joinId.trim()
+      const code = res?.data?.session?.sessionCode ?? joinId.trim()
+      setSession(realSessionId, code)
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to join session')
     } finally {
       setJoining(false)
     }
@@ -156,7 +159,7 @@ export default function SessionPage() {
           }}
         >
           <p className="text-xs font-mono mb-2" style={{ color: '#8a5555', letterSpacing: '0.08em' }}>
-            SESSION CREATED — share this ID with other participants
+            SESSION CREATED — share this code with friends
           </p>
           <div className="flex items-center gap-3">
             <span
@@ -191,7 +194,7 @@ export default function SessionPage() {
       >
         <span className="status-dot-active flex-shrink-0" />
         <span className="text-sm font-mono" style={{ color: '#ffe8e8' }}>
-          <span style={{ color: '#ff6b6b' }}>{sessionId}</span>
+          <span style={{ color: '#ff6b6b' }}>{sessionCode || sessionId}</span>
           {' · '}
           <span>{activeDevices.length} device{activeDevices.length !== 1 ? 's' : ''}</span>
           {' · '}
@@ -205,7 +208,7 @@ export default function SessionPage() {
         {/* Left column */}
         <div className="w-full lg:w-[40%] flex flex-col gap-4">
           <SessionInfo />
-          <ScriptDownload sessionId={sessionId} userId={user?.userId || user?.id} />
+          <ScriptDownload userId={user?.userId || user?.id} />
         </div>
 
         {/* Right column: device grid */}

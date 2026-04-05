@@ -35,7 +35,8 @@ function CopyField({ label, value }) {
 }
 
 export default function SessionInfo() {
-  const { sessionId, sessionStatus, connectedDevices } = useSessionStore()
+  const sessionCode = useSessionStore((s) => s.sessionCode)
+  const { sessionStatus, connectedDevices } = useSessionStore()
   const { user } = useAuthStore()
 
   const activeCount = connectedDevices.filter((d) => d.status !== 'dropped').length
@@ -52,7 +53,7 @@ export default function SessionInfo() {
       </div>
 
       <div className="grid grid-cols-1 gap-4">
-        <CopyField label="Session ID" value={sessionId || '—'} />
+        <CopyField label="Session Code" value={sessionCode || '—'} />
         {user?.userId && <CopyField label="User ID" value={user.userId} />}
         {user?.email && <CopyField label="Email" value={user.email} />}
 

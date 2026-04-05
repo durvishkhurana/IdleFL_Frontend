@@ -1,19 +1,24 @@
 import { useEffect, useState } from 'react'
 import socket from './socket'
 import useAuthStore from '../store/authStore'
-import useSessionStore from '../store/sessionStore'
+import { useSessionStore } from '../store/sessionStore'
 import useJobStore from '../store/jobStore'
 
 export function useSocket() {
   const [isConnected, setIsConnected] = useState(socket.connected)
   const token = useAuthStore((s) => s.token)
+  const sessionId = useSessionStore((s) => s.sessionId)
   const { addDevice, updateDevice, removeDevice } = useSessionStore()
   const { updateRound, completeJob } = useJobStore()
 
   useEffect(() => {
     if (!token) return
 
+    const sessionIdFromStore = useSessionStore.getState().sessionId
     socket.connect()
+    if (sessionIdFromStore) {
+      socket.emit('join:session', sessionIdFromStore)
+    }
 
     function onConnect() { setIsConnected(true) }
     function onDisconnect() { setIsConnected(false) }
@@ -92,6 +97,11 @@ export function useSocket() {
       socket.disconnect()
     }
   }, [token])
+
+  useEffect(() => {
+    if (!sessionId || !socket.connected) return
+    socket.emit('join:session', sessionId)
+  }, [sessionId])
 
   return { socket, isConnected }
 }

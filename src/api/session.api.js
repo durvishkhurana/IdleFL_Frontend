@@ -3,8 +3,8 @@ import api from './axiosInstance'
 export const createSession = () =>
   api.post('/api/sessions')
 
-export const joinSession = (sessionId) =>
-  api.post('/api/sessions/join', { sessionId })
+export const joinSession = (sessionCode) =>
+  api.post('/api/sessions/join', { sessionCode })
 
 export const getSession = (sessionId) =>
   api.get(`/api/sessions/${sessionId}`)
