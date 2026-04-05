@@ -24,6 +24,7 @@ export function useTraining() {
     try {
       const res = await startTrainingApi({ sessionId, modelType, config, datasetFile })
       const jobId = res.data.job?.id ?? res.data.jobId
+      console.log('[training] jobId from start API:', jobId)
       startJob(jobId, modelType, config.numRounds ?? 10)
       return { success: true, data: res.data }
     } catch (err) {

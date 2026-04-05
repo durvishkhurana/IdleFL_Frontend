@@ -4,8 +4,43 @@ const SHARD_COLORS = [
   '#00e5ff', '#69ff5e', '#ff6b6b', '#ffd36b',
 ]
 
-export default function DeviceContribution({ deviceContributions = [], devices = [] }) {
-  if (!deviceContributions || deviceContributions.length === 0) {
+function enrichContributions(deviceContributions, devices) {
+  const byId = new Map((devices || []).map((d) => [d.deviceId, d]))
+  return (deviceContributions || []).map((c) => {
+    const dev = byId.get(c.deviceId)
+    const samples = c.samples ?? c.shardSize ?? 0
+    return {
+      ...c,
+      samples,
+      name: c.name ?? dev?.deviceName ?? dev?.name,
+      computeType: c.computeType ?? dev?.computeType,
+      os: c.os ?? dev?.os,
+    }
+  })
+}
+
+/** Prefer socket shard sizes; otherwise one equal bar per connected device (~100/n % each). */
+function buildShardRows(deviceContributions, devices, connectedDevices) {
+  const enriched = enrichContributions(deviceContributions, devices)
+  const hasRealSamples = enriched.some((r) => (r.samples || 0) > 0)
+  if (hasRealSamples) return enriched
+
+  const alive = (connectedDevices || []).filter((d) => d.status !== 'dropped')
+  if (alive.length === 0) return []
+
+  return alive.map((d) => ({
+    deviceId: d.deviceId,
+    name: d.deviceName,
+    computeType: d.computeType,
+    os: d.os,
+    samples: 1,
+  }))
+}
+
+export default function DeviceContribution({ deviceContributions = [], devices = [], connectedDevices = [] }) {
+  const rows = buildShardRows(deviceContributions, devices, connectedDevices)
+
+  if (!rows.length) {
     return (
       <div className="bg-[#111118] border border-[rgba(0,255,136,0.15)] rounded-lg p-4">
         <h3 className="text-xs font-bold text-[#555] font-mono uppercase tracking-widest mb-2">Data Shards</h3>
@@ -14,7 +49,7 @@ export default function DeviceContribution({ deviceContributions = [], devices =
     )
   }
 
-  const total = deviceContributions.reduce((acc, d) => acc + (d.samples || 0), 0)
+  const total = rows.reduce((acc, d) => acc + (d.samples || 0), 0)
 
   return (
     <div className="bg-[#111118] border border-[rgba(0,255,136,0.15)] rounded-lg p-4">
@@ -22,30 +57,37 @@ export default function DeviceContribution({ deviceContributions = [], devices =
 
       {/* Stacked bar */}
       <div className="h-5 rounded overflow-hidden flex mb-3">
-        {deviceContributions.map((d, i) => {
+        {rows.map((d, i) => {
           const pct = total > 0 ? ((d.samples || 0) / total) * 100 : 0
+          const label = d.name || d.deviceId
+          const ct = d.computeType ? ` · ${d.computeType}` : ''
           return (
             <div
               key={d.deviceId || i}
               style={{ width: `${pct}%`, background: SHARD_COLORS[i % SHARD_COLORS.length] }}
-              title={`${d.name || d.deviceId}: ${pct.toFixed(1)}%`}
+              title={`${label}${ct}: ${pct.toFixed(1)}%`}
             />
           )
         })}
       </div>
 
-      {/* Legend */}
+      {/* Legend — one row per connected / contributing device */}
       <div className="flex flex-col gap-1.5">
-        {deviceContributions.map((d, i) => {
+        {rows.map((d, i) => {
           const pct = total > 0 ? ((d.samples || 0) / total) * 100 : 0
           const color = SHARD_COLORS[i % SHARD_COLORS.length]
           return (
-            <div key={d.deviceId || i} className="flex items-center justify-between text-xs font-mono">
-              <div className="flex items-center gap-2">
+            <div key={d.deviceId || i} className="flex items-center justify-between text-xs font-mono gap-2">
+              <div className="flex items-center gap-2 min-w-0">
                 <span className="w-2 h-2 rounded-sm flex-shrink-0" style={{ background: color }} />
-                <span className="text-[#999] truncate max-w-[120px]">{d.name || d.deviceId}</span>
+                <span className="text-[#999] truncate">{d.name || d.deviceId}</span>
+                {d.computeType && (
+                  <span className="text-[#666] flex-shrink-0 uppercase text-[10px] tracking-tight">{d.computeType}</span>
+                )}
               </div>
-              <span style={{ color }}>{pct.toFixed(1)}%</span>
+              <span className="flex-shrink-0" style={{ color }}>
+                {pct.toFixed(1)}% · {(d.samples || 0).toLocaleString()} samples
+              </span>
             </div>
           )
         })}

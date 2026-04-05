@@ -5,6 +5,16 @@ import { formatScore } from '../../utils/formatters'
 
 const OS_ICON = { windows: '🪟', mac: '🍎', linux: '🐧' }
 
+/** Badge text: exact CUDA/MPS/CPU from backend, else legacy inference, else raw or placeholder. */
+function deviceComputeBadgeText(device) {
+  const raw = device.computeType
+  if (raw === 'CUDA' || raw === 'MPS' || raw === 'CPU') return raw
+  if (raw != null && String(raw).trim() !== '') return String(raw).trim()
+  const inferred = getComputeLabel(device)
+  if (inferred === 'CUDA' || inferred === 'MPS' || inferred === 'CPU') return inferred
+  return 'UNKNOWN'
+}
+
 function StatBar({ label, value = 0, color = '#ff6b6b' }) {
   return (
     <div className="flex flex-col gap-1">
@@ -66,7 +76,12 @@ export default function DeviceCard({ device }) {
   const score = scoreDevice(device)
   const scoreColorName = getScoreColor(score)
   const scoreColor = scoreColorName === 'green' ? '#00ff88' : scoreColorName === 'amber' ? '#ffaa00' : '#ff4444'
-  const computeLabel = getComputeLabel(device)
+  const computeLabel = deviceComputeBadgeText(device)
+  const computeBadgeTone =
+    computeLabel === 'CUDA' ? 'cuda'
+      : computeLabel === 'MPS' ? 'mps'
+        : computeLabel === 'CPU' ? 'cpu'
+          : 'other'
   const isDropped  = status === 'dropped'
   const isTraining = status === 'training'
   const isActive   = status === 'active'
@@ -102,9 +117,10 @@ export default function DeviceCard({ device }) {
         <span
           className={clsx(
             'inline-block px-2 py-0.5 text-[10px] font-bold font-mono uppercase rounded tracking-widest',
-            computeLabel === 'CUDA' && 'compute-cuda',
-            computeLabel === 'MPS'  && 'compute-mps',
-            computeLabel === 'CPU'  && 'compute-cpu',
+            computeBadgeTone === 'cuda' && 'compute-cuda',
+            computeBadgeTone === 'mps' && 'compute-mps',
+            computeBadgeTone === 'cpu' && 'compute-cpu',
+            computeBadgeTone === 'other' && 'compute-cpu',
           )}
         >
           {computeLabel}

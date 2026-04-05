@@ -5,8 +5,10 @@ export function useDevices() {
   const devices = useSessionStore((s) => s.connectedDevices)
 
   const activeDevices = devices.filter((d) => d.status !== 'dropped')
-  const gpuDevices = activeDevices.filter((d) => d.hasGpu)
-  const cpuOnlyDevices = activeDevices.filter((d) => d.computeType === 'CPU')
+  const gpuDevices = activeDevices.filter(
+    (d) => d.hasGpu || d.computeType === 'CUDA' || d.computeType === 'MPS'
+  )
+  const cpuOnlyDevices = activeDevices.filter((d) => getComputeLabel(d) === 'CPU')
 
   const cpuOnlyCount = cpuOnlyDevices.length
   const hasMajorityCpuOnly =
@@ -15,6 +17,8 @@ export function useDevices() {
 
   const devicesWithLabel = devices.map((d) => ({
     ...d,
+    name: d.name ?? d.deviceName,
+    hasGpu: d.hasGpu ?? (d.computeType === 'CUDA' || d.computeType === 'MPS'),
     computeLabel: getComputeLabel(d),
   }))
 

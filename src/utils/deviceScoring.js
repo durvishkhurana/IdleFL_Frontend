@@ -21,12 +21,17 @@ export function scoreDevice(device) {
 
 /**
  * Returns the compute label for a device.
+ * Prefers backend `computeType` (CUDA | MPS | CPU); falls back to legacy hasGpu/gpuType.
  * @param {object} device
  * @returns {'CUDA'|'MPS'|'CPU'}
  */
 export function getComputeLabel(device) {
+  const ct = device.computeType
+  if (ct === 'CUDA' || ct === 'cuda') return 'CUDA'
+  if (ct === 'MPS' || ct === 'mps') return 'MPS'
+  if (ct === 'CPU' || ct === 'cpu') return 'CPU'
   if (device.hasGpu && device.gpuType === 'cuda') return 'CUDA'
-  if (device.hasGpu && device.gpuType === 'mps')  return 'MPS'
+  if (device.hasGpu && device.gpuType === 'mps') return 'MPS'
   return 'CPU'
 }
 

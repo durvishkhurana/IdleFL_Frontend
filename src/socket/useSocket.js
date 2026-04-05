@@ -54,8 +54,13 @@ export function useSocket() {
       completeJob(data?.finalAccuracy)
     }
 
-    function onTrainingStarted() {
-      useJobStore.getState().setJobStatus('RUNNING')
+    function onTrainingStarted(data) {
+      useJobStore.setState(() => ({
+        status: 'RUNNING',
+        ...(data?.jobId != null && data.jobId !== '' && { jobId: data.jobId }),
+        ...(data?.modelType && { modelType: data.modelType }),
+        ...(data?.numRounds != null && Number.isFinite(Number(data.numRounds)) && { totalRounds: Number(data.numRounds) }),
+      }))
     }
 
     function onTrainingPaused() {

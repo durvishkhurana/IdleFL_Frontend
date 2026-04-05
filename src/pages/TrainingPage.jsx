@@ -114,7 +114,8 @@ export default function TrainingPage() {
 
   const { job, startTraining, resetJob, error: trainingError, setError: setTrainingError } = useTraining()
   const { devices, hasMajorityCpuOnly } = useDevices()
-  const { sessionId } = useSessionStore()
+  const sessionId = useSessionStore((s) => s.sessionId)
+  const connectedDevices = useSessionStore((s) => s.connectedDevices)
   const { startMock, mockRunning } = useMockTraining()
 
   const [modelType, setModelType] = useState('LINEAR_REGRESSION')
@@ -160,6 +161,7 @@ export default function TrainingPage() {
 
   const handleDownloadModel = async () => {
     if (!job.jobId) return
+    console.log('[training] download model request jobId:', job.jobId)
     setModelDownloadLoading(true)
     setModelDownloadError(null)
     try {
@@ -179,10 +181,12 @@ export default function TrainingPage() {
         try {
           const text = await err.response.data.text()
           const parsed = JSON.parse(text)
-          msg = parsed.message || msg
+          msg = parsed.error || parsed.message || msg
         } catch {
           /* keep msg */
         }
+      } else if (err.response?.data?.error) {
+        msg = err.response.data.error
       } else if (err.response?.data?.message) {
         msg = err.response.data.message
       }
@@ -415,7 +419,11 @@ export default function TrainingPage() {
           </div>
 
           <div className="w-full lg:w-[300px] flex flex-col gap-3">
-            <DeviceContribution deviceContributions={job.deviceContributions} />
+            <DeviceContribution
+              deviceContributions={job.deviceContributions}
+              devices={devices}
+              connectedDevices={connectedDevices}
+            />
             <div
               className="rounded-lg p-4"
               style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
