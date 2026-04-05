@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { jsPDF } from 'jspdf'
 import { useNavigate } from 'react-router-dom'
 import PageWrapper from '../components/layout/PageWrapper'
 import LossGraph from '../components/training/LossGraph'
@@ -11,6 +12,7 @@ import WarningBanner from '../components/session/WarningBanner'
 import DeviceCard from '../components/session/DeviceCard'
 import Button from '../components/ui/Button'
 import { useTraining } from '../hooks/useTraining'
+import { downloadModel } from '../api/training.api'
 import { useDevices } from '../hooks/useDevices'
 import { useSocket } from '../socket/useSocket'
 import useJobStore from '../store/jobStore'
@@ -120,6 +122,8 @@ export default function TrainingPage() {
   const [datasetUploaded, setDatasetUploaded] = useState(false)
   const [startLoading, setStartLoading] = useState(false)
   const [showStickyBar, setShowStickyBar] = useState(false)
+  const [modelDownloadLoading, setModelDownloadLoading] = useState(false)
+  const [modelDownloadError, setModelDownloadError] = useState(null)
 
   // Show sticky bar when dataset uploaded
   useEffect(() => {
@@ -140,6 +144,143 @@ export default function TrainingPage() {
       startMock(config.numRounds)
     }
     setStartLoading(false)
+  }
+
+  const handleDownloadModel = async () => {
+    if (!job.jobId) return
+    setModelDownloadLoading(true)
+    setModelDownloadError(null)
+    try {
+      const res = await downloadModel(job.jobId)
+      const blob = new Blob([res.data])
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `idlefl_model_${job.jobId}.json`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      let msg = err.message || 'Download failed'
+      if (err.response?.data instanceof Blob) {
+        try {
+          const text = await err.response.data.text()
+          const parsed = JSON.parse(text)
+          msg = parsed.message || msg
+        } catch {
+          /* keep msg */
+        }
+      } else if (err.response?.data?.message) {
+        msg = err.response.data.message
+      }
+      setModelDownloadError(msg)
+    } finally {
+      setModelDownloadLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (!modelDownloadError) return
+    const t = setTimeout(() => setModelDownloadError(null), 5000)
+    return () => clearTimeout(t)
+  }, [modelDownloadError])
+
+  const handleDownloadPdf = () => {
+    const jobId = job.jobId || 'N/A'
+    const doc = new jsPDF({ unit: 'mm', format: 'a4' })
+    const pageW = doc.internal.pageSize.getWidth()
+    const marginL = 14
+
+    // ── Header ──────────────────────────────────────────────
+    doc.setFontSize(20)
+    doc.setTextColor(255, 107, 107)
+    doc.text('IdleFL Training Results', marginL, 20)
+
+    doc.setFontSize(9)
+    doc.setTextColor(120, 120, 120)
+    doc.text(`Session ID: ${sessionId || 'N/A'}`, marginL, 30)
+    doc.text(`Job ID: ${jobId}`, marginL, 35)
+
+    // ── Model & hyperparameters ──────────────────────────────
+    doc.setFontSize(13)
+    doc.setTextColor(40, 40, 40)
+    doc.text('Model & Hyperparameters', marginL, 47)
+
+    doc.setFontSize(9)
+    doc.setTextColor(60, 60, 60)
+    const hyperRows = [
+      ['Model Type', job.modelType || modelType || 'N/A'],
+      ['Rounds',     String(config.numRounds)],
+      ['Learning Rate', String(config.learningRate)],
+      ['Batch Size', String(config.batchSize)],
+    ]
+    hyperRows.forEach(([label, value], i) => {
+      doc.text(`${label}:`, marginL, 54 + i * 6)
+      doc.text(value, marginL + 42, 54 + i * 6)
+    })
+
+    // ── Round-by-round results table ─────────────────────────
+    let y = 82
+    doc.setFontSize(13)
+    doc.setTextColor(40, 40, 40)
+    doc.text('Round Results', marginL, y)
+    y += 7
+
+    const colX = [marginL, marginL + 30, marginL + 85]
+    const colW = [30, 55, 60]
+    const rowH = 6
+
+    // Table header
+    doc.setFillColor(40, 40, 40)
+    doc.rect(marginL, y, colW[0] + colW[1] + colW[2], rowH, 'F')
+    doc.setFontSize(8)
+    doc.setTextColor(255, 255, 255)
+    ;['Round', 'Loss', 'Accuracy'].forEach((h, i) => {
+      doc.text(h, colX[i] + 2, y + 4)
+    })
+    y += rowH
+
+    doc.setFontSize(8)
+    job.lossHistory.forEach((loss, idx) => {
+      const acc = job.accuracyHistory[idx] ?? 0
+      const cells = [`${idx + 1}`, loss.toFixed(4), `${(acc * 100).toFixed(2)}%`]
+      doc.setFillColor(idx % 2 === 0 ? 245 : 255, idx % 2 === 0 ? 245 : 255, idx % 2 === 0 ? 245 : 255)
+      doc.rect(marginL, y, colW[0] + colW[1] + colW[2], rowH, 'F')
+      doc.setTextColor(40, 40, 40)
+      cells.forEach((cell, i) => doc.text(cell, colX[i] + 2, y + 4))
+      y += rowH
+      if (y > 270) { doc.addPage(); y = 20 }
+    })
+
+    // ── Chart image ──────────────────────────────────────────
+    const canvas = document.querySelector('canvas')
+    if (canvas) {
+      try {
+        const imgData = canvas.toDataURL('image/png')
+        y += 8
+        if (y + 85 > 280) { doc.addPage(); y = 20 }
+        doc.setFontSize(13)
+        doc.setTextColor(40, 40, 40)
+        doc.text('Final Accuracy vs Rounds', marginL, y)
+        y += 6
+        doc.addImage(imgData, 'PNG', marginL, y, pageW - marginL * 2, 80)
+        y += 88
+      } catch {
+        // canvas unavailable — skip chart
+      }
+    }
+
+    // ── Footer on every page ─────────────────────────────────
+    const totalPages = doc.getNumberOfPages()
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p)
+      doc.setFontSize(8)
+      doc.setTextColor(160, 160, 160)
+      doc.text('Generated by IdleFL · idlefl.dev', marginL, doc.internal.pageSize.getHeight() - 8)
+    }
+
+    doc.save(`idlefl_results_${jobId}.pdf`)
   }
 
   const totalTime = job.completedAt && job.startedAt
@@ -242,7 +383,7 @@ export default function TrainingPage() {
   }
 
   /* ── TRAINING PHASE ───────────────────────────────────── */
-  if (job.status === 'training') {
+  if (['training', 'RUNNING', 'PAUSED'].includes(job.status)) {
     return (
       <PageWrapper title="Training — In Progress">
         <RoundFlash round={job.roundsCompleted} />
@@ -254,7 +395,6 @@ export default function TrainingPage() {
         <RoundProgress
           currentRound={job.roundsCompleted}
           totalRounds={job.totalRounds}
-          estimatedTimeRemaining={job.estimatedTimeRemaining}
         />
 
         <div className="flex flex-col lg:flex-row gap-4 mt-4">
@@ -275,6 +415,18 @@ export default function TrainingPage() {
             </div>
           </div>
         </div>
+      </PageWrapper>
+    )
+  }
+
+  /* ── ABORTED ───────────────────────────────────────────── */
+  if (job.status === 'ABORTED') {
+    return (
+      <PageWrapper title="Training — Aborted">
+        <p className="text-sm font-mono mb-4" style={{ color: '#8a5555' }}>
+          Training was aborted.
+        </p>
+        <Button variant="primary" onClick={resetJob}>+ Start New Training</Button>
       </PageWrapper>
     )
   }
@@ -302,10 +454,27 @@ export default function TrainingPage() {
         </div>
 
         <div className="flex flex-wrap gap-3 justify-center mt-2">
-          <Button variant="secondary" onClick={() => {}}>↓ Download Model (.pt)</Button>
-          <Button variant="secondary" onClick={() => {}}>↓ Download Results PDF</Button>
+          <Button variant="secondary" loading={modelDownloadLoading} onClick={handleDownloadModel}>↓ Download Model (JSON)</Button>
+          <Button variant="secondary" onClick={handleDownloadPdf}>↓ Download Results PDF</Button>
           <Button variant="primary" onClick={resetJob}>+ Start New Training</Button>
         </div>
+        <p className="text-center text-xs font-mono mt-1" style={{ color: '#4a2a2a' }}>
+          JSON format — importable via numpy/PyTorch
+        </p>
+        {modelDownloadError && (
+          <div
+            className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-lg px-4 py-2 text-xs font-mono shadow-lg fade-in"
+            style={{
+              background: 'rgba(40,10,10,0.95)',
+              border: '1px solid rgba(255,68,68,0.45)',
+              color: '#ff6666',
+              maxWidth: 'min(90vw, 420px)',
+            }}
+            role="alert"
+          >
+            {modelDownloadError}
+          </div>
+        )}
       </div>
     </PageWrapper>
   )

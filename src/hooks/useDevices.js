@@ -6,9 +6,11 @@ export function useDevices() {
 
   const activeDevices = devices.filter((d) => d.status !== 'dropped')
   const gpuDevices = activeDevices.filter((d) => d.hasGpu)
-  const cpuOnlyDevices = activeDevices.filter((d) => !d.hasGpu)
+  const cpuOnlyDevices = activeDevices.filter((d) => d.computeType === 'CPU')
 
-  const hasMajorityCpuOnly = cpuOnlyDevices.length > gpuDevices.length
+  const cpuOnlyCount = cpuOnlyDevices.length
+  const hasMajorityCpuOnly =
+    activeDevices.length > 0 && cpuOnlyCount > activeDevices.length / 2
   const hasGpuDevice = gpuDevices.length > 0
 
   const devicesWithLabel = devices.map((d) => ({

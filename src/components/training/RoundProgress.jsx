@@ -1,6 +1,39 @@
-import { formatDuration, formatRound } from '../../utils/formatters'
+import { useEffect, useRef, useState } from 'react'
+import { formatDuration } from '../../utils/formatters'
 
-export default function RoundProgress({ currentRound = 0, totalRounds = 10, estimatedTimeRemaining, statusText }) {
+export default function RoundProgress({ currentRound = 0, totalRounds = 10, statusText }) {
+  const sessionStartRef = useRef(null)
+  const roundStartRef = useRef(null)
+  const [, setTick] = useState(0)
+
+  useEffect(() => {
+    if (sessionStartRef.current == null) {
+      sessionStartRef.current = Date.now()
+    }
+  }, [])
+
+  useEffect(() => {
+    roundStartRef.current = Date.now()
+  }, [currentRound])
+
+  useEffect(() => {
+    if (currentRound <= 0 || currentRound >= totalRounds) return
+    const id = setInterval(() => setTick((t) => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [currentRound, totalRounds])
+
+  let etaSeconds = null
+  if (currentRound > 0 && currentRound < totalRounds && sessionStartRef.current != null) {
+    const timeSinceStartSec = (Date.now() - sessionStartRef.current) / 1000
+    const avgRoundDuration = timeSinceStartSec / currentRound
+    etaSeconds = avgRoundDuration * (totalRounds - currentRound)
+  }
+
+  const etaDisplay =
+    etaSeconds != null && Number.isFinite(etaSeconds) && etaSeconds >= 0
+      ? formatDuration(Math.max(0, etaSeconds))
+      : '--:--'
+
   const pct = totalRounds > 0 ? (currentRound / totalRounds) * 100 : 0
 
   return (
@@ -17,7 +50,7 @@ export default function RoundProgress({ currentRound = 0, totalRounds = 10, esti
         <div className="text-right">
           <span className="text-xs text-[#555] uppercase tracking-widest">ETA</span>
           <div className="text-sm font-bold font-mono text-[#00d4ff] mt-0.5">
-            {estimatedTimeRemaining != null ? formatDuration(estimatedTimeRemaining) : '--:--'}
+            {etaDisplay}
           </div>
         </div>
       </div>

@@ -44,6 +44,8 @@ const useJobStore = create((set) => ({
       finalAccuracy: finalAccuracy ?? state.accuracyHistory[state.accuracyHistory.length - 1],
     })),
 
+  setJobStatus: (status) => set({ status }),
+
   resetJob: () =>
     set({
       jobId: null,

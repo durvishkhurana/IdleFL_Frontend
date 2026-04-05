@@ -4,7 +4,7 @@ import clsx from 'clsx'
 const VARIANTS = {
   'majority-cpu': {
     icon: '⚠️',
-    text: 'Most connected devices are CPU-only. Training will be significantly slower. Consider using devices with a GPU.',
+    text: 'Most connected devices are CPU-only. Training may be slower than your best single GPU device.',
     color: '#ffaa00',
     bg: 'rgba(255,170,0,0.08)',
     border: 'rgba(255,170,0,0.3)',

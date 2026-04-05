@@ -88,13 +88,13 @@ function AnimatedTerminal() {
 
 /* ─── Stats ────────────────────────────────────────────────────── */
 const STATS = [
-  { icon: '⚡', value: '~4×', label: 'Training Speedup' },
-  { icon: '🔒', value: '0 bytes', label: 'Raw Data Sent' },
-  { icon: '🎯', value: '<98%', label: 'CNN Accuracy MNIST' },
-  { icon: '🛡️', value: '90s', label: 'Max Fault Detection' },
+  { icon: '⚡', value: '—', label: 'Training Speedup', pending: true },
+  { icon: '🔒', value: '0 bytes', label: 'Raw Data Sent', pending: false },
+  { icon: '🎯', value: '—', label: 'CNN Accuracy (MNIST)', pending: true },
+  { icon: '🛡️', value: '90s', label: 'Max Fault Detection', pending: false },
 ]
 
-function StatCounter({ value, label, icon }) {
+function StatCounter({ value, label, icon, pending }) {
   const ref = useRef(null)
   const [visible, setVisible] = useState(false)
 
@@ -119,6 +119,11 @@ function StatCounter({ value, label, icon }) {
         {value}
       </div>
       <div className="text-xs mt-1" style={{ color: '#8a5555' }}>{label}</div>
+      {pending && (
+        <div className="text-[10px] mt-0.5 font-mono" style={{ color: 'rgba(255,107,107,0.4)' }}>
+          benchmark pending
+        </div>
+      )}
     </div>
   )
 }
@@ -244,6 +249,31 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── DEMO VIDEO ────────────────────────────────────────────── */}
+      <section className="py-16 px-6 max-w-4xl mx-auto">
+        <h2 className="text-2xl font-medium mb-3 text-white">See it in action</h2>
+        <p className="text-sm mb-6" style={{ color: '#8a5555' }}>
+          A real training run — two laptops, MNIST dataset, 10 rounds
+        </p>
+        <div
+          className="relative w-full rounded-xl overflow-hidden"
+          style={{
+            aspectRatio: '16 / 9',
+            border: '1px solid rgba(255,107,107,0.15)',
+            background: '#080404',
+            boxShadow: '0 0 40px rgba(255,107,107,0.06), 0 24px 48px rgba(0,0,0,0.5)',
+          }}
+        >
+          <iframe
+            src="https://www.youtube.com/embed/YOUR_VIDEO_ID"
+            className="w-full h-full"
+            style={{ border: 'none' }}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+        </div>
+      </section>
+
       {/* ── STATS BAR ─────────────────────────────────────────────── */}
       <section
         className="py-10 px-8"
@@ -253,8 +283,13 @@ export default function LandingPage() {
           borderBottom: '1px solid var(--border)',
         }}
       >
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8">
-          {STATS.map(s => <StatCounter key={s.label} {...s} />)}
+        <div className="max-w-5xl mx-auto">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+            {STATS.map(s => <StatCounter key={s.label} {...s} />)}
+          </div>
+          <p className="text-center text-[10px] font-mono mt-6" style={{ color: 'rgba(255,107,107,0.35)' }}>
+            Benchmarks coming soon
+          </p>
         </div>
       </section>
 

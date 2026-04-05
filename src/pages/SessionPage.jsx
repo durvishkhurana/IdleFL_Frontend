@@ -25,6 +25,8 @@ export default function SessionPage() {
   const [joining, setJoining] = useState(false)
   const [joinId, setJoinId] = useState('')
   const [error, setError] = useState(null)
+  const [createdSessionId, setCreatedSessionId] = useState(null)
+  const [copied, setCopied] = useState(false)
 
   // Demo mode: inject mock devices
   useEffect(() => {
@@ -49,15 +51,25 @@ export default function SessionPage() {
     return () => clearInterval(interval)
   }, [sessionId])
 
+  const copySessionId = (id) => {
+    navigator.clipboard.writeText(id).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+
   const handleCreate = async () => {
     setCreating(true)
     setError(null)
     try {
       const res = await createSession()
-      setSession(res.data.sessionId || res.data.id)
-    } catch {
-      const mockId = DEMO_MODE ? 'FL-DEMO' : `FL-${Math.random().toString(36).slice(2,6).toUpperCase()}`
-      setSession(mockId)
+      const newId = res.data.session.sessionCode
+      setCreatedSessionId(newId)
+      // Auto-join: no need for the user to manually enter and submit
+      try { await joinSession(newId) } catch { /* best-effort */ }
+      setSession(newId)
+    } catch (err) {
+      setError(err.response?.data?.message || err.message || 'Failed to create session')
     } finally {
       setCreating(false)
     }
@@ -132,6 +144,42 @@ export default function SessionPage() {
   return (
     <PageWrapper title="Session">
       {hasMajorityCpuOnly && <WarningBanner variant="majority-cpu" />}
+
+      {/* Session Created — persistent ID display for the creator */}
+      {createdSessionId && (
+        <div
+          className="rounded-lg px-5 py-4 mb-4 fade-in"
+          style={{
+            background: 'rgba(255,107,107,0.08)',
+            border: '1px solid rgba(255,107,107,0.35)',
+            boxShadow: '0 0 24px rgba(255,107,107,0.08)',
+          }}
+        >
+          <p className="text-xs font-mono mb-2" style={{ color: '#8a5555', letterSpacing: '0.08em' }}>
+            SESSION CREATED — share this ID with other participants
+          </p>
+          <div className="flex items-center gap-3">
+            <span
+              className="font-mono font-bold tracking-widest select-all"
+              style={{ fontSize: '1.75rem', color: '#ff6b6b', letterSpacing: '0.15em' }}
+            >
+              {createdSessionId}
+            </span>
+            <button
+              onClick={() => copySessionId(createdSessionId)}
+              className="flex items-center gap-1.5 rounded px-3 py-1.5 text-xs font-mono transition-all"
+              style={{
+                background: copied ? 'rgba(0,255,136,0.12)' : 'rgba(255,107,107,0.12)',
+                border: `1px solid ${copied ? 'rgba(0,255,136,0.4)' : 'rgba(255,107,107,0.3)'}`,
+                color: copied ? '#00ff88' : '#ff6b6b',
+                cursor: 'pointer',
+              }}
+            >
+              {copied ? '✓ Copied' : '⧉ Copy'}
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Session Active Banner */}
       <div

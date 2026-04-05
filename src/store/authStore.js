@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { reconnectWithToken } from '../socket/socket'
 
 const useAuthStore = create(
   persist(
@@ -8,7 +9,10 @@ const useAuthStore = create(
       token: null,
       isAuthenticated: false,
 
-      login: (user, token) => set({ user, token, isAuthenticated: true }),
+      login: (user, token) => {
+        set({ user, token, isAuthenticated: true })
+        reconnectWithToken(token)
+      },
       logout: () => set({ user: null, token: null, isAuthenticated: false }),
       setUser: (user) => set({ user }),
     }),
