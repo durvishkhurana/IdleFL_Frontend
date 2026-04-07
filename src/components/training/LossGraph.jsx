@@ -8,11 +8,12 @@ import { applyChartDefaults, GREEN_DATASET_STYLE, CYAN_DATASET_STYLE } from '../
 Chart.register(LineController, LineElement, PointElement, LinearScale, CategoryScale, Legend, Tooltip, Filler)
 applyChartDefaults()
 
-export default function LossGraph({ lossHistory = [], accuracyHistory = [] }) {
+export default function LossGraph({ lossHistory = [], accuracyHistory = [], modelType }) {
   const canvasRef = useRef(null)
   const chartRef = useRef(null)
 
   const labels = lossHistory.map((_, i) => `R${i + 1}`)
+  const metricLabel = modelType === 'LINEAR_REGRESSION' ? 'R² Score' : 'Accuracy'
 
   useEffect(() => {
     if (!canvasRef.current) return
@@ -21,6 +22,7 @@ export default function LossGraph({ lossHistory = [], accuracyHistory = [] }) {
       chartRef.current.data.labels = labels
       chartRef.current.data.datasets[0].data = lossHistory
       chartRef.current.data.datasets[1].data = accuracyHistory
+      chartRef.current.data.datasets[1].label = metricLabel
       chartRef.current.update('active')
       return
     }
@@ -37,7 +39,7 @@ export default function LossGraph({ lossHistory = [], accuracyHistory = [] }) {
             fill: true,
           },
           {
-            label: 'Accuracy',
+            label: metricLabel,
             data: accuracyHistory,
             ...CYAN_DATASET_STYLE,
             fill: false,
@@ -83,8 +85,9 @@ export default function LossGraph({ lossHistory = [], accuracyHistory = [] }) {
     chartRef.current.data.labels = lossHistory.map((_, i) => `R${i + 1}`)
     chartRef.current.data.datasets[0].data = lossHistory
     chartRef.current.data.datasets[1].data = accuracyHistory
+    chartRef.current.data.datasets[1].label = metricLabel
     chartRef.current.update('active')
-  }, [lossHistory, accuracyHistory])
+  }, [lossHistory, accuracyHistory, metricLabel])
 
   return (
     <div

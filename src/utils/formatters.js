@@ -71,3 +71,15 @@ export function formatScore(score) {
   if (score == null || isNaN(score)) return '—%'
   return `${Math.round(score * 100)}%`
 }
+
+export function accuracyLabelForModel(modelType) {
+  return modelType === 'LINEAR_REGRESSION' ? 'R² Score' : 'Accuracy'
+}
+
+export function formatAccuracyForModel(value, modelType) {
+  if (value == null || isNaN(value)) return '—'
+  if (modelType === 'LINEAR_REGRESSION') {
+    return Number(value).toFixed(4)
+  }
+  return `${(Number(value) * 100).toFixed(1)}%`
+}

@@ -16,7 +16,7 @@ import { downloadModel } from '../api/training.api'
 import { useDevices } from '../hooks/useDevices'
 import { useSocket } from '../socket/useSocket'
 import useSessionStore from '../store/sessionStore'
-import { formatDuration, formatScore } from '../utils/formatters'
+import { accuracyLabelForModel, formatAccuracyForModel, formatDuration, formatScore } from '../utils/formatters'
 import { Link } from 'react-router-dom'
 
 /* ─── Round flash callout ─────────────────────────────────── */
@@ -210,7 +210,7 @@ export default function TrainingPage() {
     doc.rect(marginL, y, colW[0] + colW[1] + colW[2], rowH, 'F')
     doc.setFontSize(8)
     doc.setTextColor(255, 255, 255)
-    ;['Round', 'Loss', 'Accuracy'].forEach((h, i) => {
+    ;['Round', 'Loss', accuracyLabelForModel(job.modelType || modelType)].forEach((h, i) => {
       doc.text(h, colX[i] + 2, y + 4)
     })
     y += rowH
@@ -218,7 +218,7 @@ export default function TrainingPage() {
     doc.setFontSize(8)
     job.lossHistory.forEach((loss, idx) => {
       const acc = job.accuracyHistory[idx] ?? 0
-      const cells = [`${idx + 1}`, loss.toFixed(4), `${(acc * 100).toFixed(2)}%`]
+      const cells = [`${idx + 1}`, loss.toFixed(4), formatAccuracyForModel(acc, job.modelType || modelType)]
       doc.setFillColor(idx % 2 === 0 ? 245 : 255, idx % 2 === 0 ? 245 : 255, idx % 2 === 0 ? 245 : 255)
       doc.rect(marginL, y, colW[0] + colW[1] + colW[2], rowH, 'F')
       doc.setTextColor(40, 40, 40)
@@ -236,7 +236,7 @@ export default function TrainingPage() {
         if (y + 85 > 280) { doc.addPage(); y = 20 }
         doc.setFontSize(13)
         doc.setTextColor(40, 40, 40)
-        doc.text('Final Accuracy vs Rounds', marginL, y)
+        doc.text(`Final ${accuracyLabelForModel(job.modelType || modelType)} vs Rounds`, marginL, y)
         y += 6
         doc.addImage(imgData, 'PNG', marginL, y, pageW - marginL * 2, 80)
         y += 88
@@ -381,7 +381,7 @@ export default function TrainingPage() {
 
         <div className="flex flex-col lg:flex-row gap-4 mt-4">
           <div className="flex-1" style={{ minHeight: 340 }}>
-            <LossGraph lossHistory={job.lossHistory} accuracyHistory={job.accuracyHistory} />
+            <LossGraph lossHistory={job.lossHistory} accuracyHistory={job.accuracyHistory} modelType={job.modelType} />
           </div>
 
           <div className="w-full lg:w-[300px] flex flex-col gap-3">
@@ -418,12 +418,16 @@ export default function TrainingPage() {
     <PageWrapper title="Training — Complete">
       <div className="flex flex-col gap-5">
         <div style={{ minHeight: 340 }}>
-          <LossGraph lossHistory={job.lossHistory} accuracyHistory={job.accuracyHistory} />
+          <LossGraph lossHistory={job.lossHistory} accuracyHistory={job.accuracyHistory} modelType={job.modelType} />
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {[
-            { label: 'Final Accuracy', value: formatScore(job.finalAccuracy), color: '#ff6b6b' },
+            {
+              label: accuracyLabelForModel(job.modelType || modelType),
+              value: formatAccuracyForModel(job.finalAccuracy, job.modelType || modelType),
+              color: '#ff6b6b',
+            },
             { label: 'Total Rounds',   value: `${job.roundsCompleted}`,       color: '#00d4ff' },
             { label: 'Total Time',     value: totalTime ? formatDuration(totalTime) : '—', color: '#a78bfa' },
             {
