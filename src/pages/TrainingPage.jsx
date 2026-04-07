@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { jsPDF } from 'jspdf'
-import { useNavigate } from 'react-router-dom'
+import Papa from 'papaparse'
 import PageWrapper from '../components/layout/PageWrapper'
 import LossGraph from '../components/training/LossGraph'
 import RoundProgress from '../components/training/RoundProgress'
@@ -16,33 +16,22 @@ import { downloadModel } from '../api/training.api'
 import { useDevices } from '../hooks/useDevices'
 import { useSocket } from '../socket/useSocket'
 import useSessionStore from '../store/sessionStore'
-import { accuracyLabelForModel, formatAccuracyForModel, formatDuration, formatScore } from '../utils/formatters'
+import { accuracyLabelForModel, formatAccuracyForModel, formatDuration } from '../utils/formatters'
 import { Link } from 'react-router-dom'
 
 /* ─── Round flash callout ─────────────────────────────────── */
 function RoundFlash({ round }) {
-  const [visible, setVisible] = useState(false)
-  const prev = useRef(round)
-
-  useEffect(() => {
-    if (round > 0 && round !== prev.current) {
-      prev.current = round
-      setVisible(true)
-      const t = setTimeout(() => setVisible(false), 2000)
-      return () => clearTimeout(t)
-    }
-  }, [round])
-
-  if (!visible) return null
+  if (!round || round <= 0) return null
   return (
     <div
-      className="fixed top-20 right-6 z-50 rounded-lg px-4 py-2 text-sm font-mono font-bold fade-in"
+      key={round}
+      className="fixed top-20 right-6 z-50 rounded-lg px-4 py-2 text-sm font-mono font-bold"
       style={{
         background: 'rgba(255,107,107,0.1)',
         border: '1px solid rgba(255,107,107,0.4)',
         color: '#ff6b6b',
         boxShadow: '0 0 20px rgba(255,107,107,0.2)',
-        animation: 'fadeInScale 0.2s ease both',
+        animation: 'fadeInScale 0.2s ease both, fadeOut 0.4s ease 1.6s forwards',
       }}
     >
       ⚡ FedAvg Round {round} complete
@@ -81,7 +70,6 @@ function EmptyDevicesGuide({ sessionId }) {
 }
 
 export default function TrainingPage() {
-  const navigate = useNavigate()
   useSocket()
 
   const { job, startTraining, resetJob, error: trainingError, setError: setTrainingError } = useTraining()
@@ -89,7 +77,7 @@ export default function TrainingPage() {
   const sessionId = useSessionStore((s) => s.sessionId)
   const [modelType, setModelType] = useState('LINEAR_REGRESSION')
   const [config, setConfig] = useState({ learningRate: 0.01, numRounds: 10, batchSize: 32 })
-  const [datasetFile, setDatasetFile] = useState(null)
+  const [datasetMeta, setDatasetMeta] = useState(null)
   const [datasetUploaded, setDatasetUploaded] = useState(false)
   const [startLoading, setStartLoading] = useState(false)
   const [showStickyBar, setShowStickyBar] = useState(false)
@@ -101,19 +89,65 @@ export default function TrainingPage() {
   }, [datasetUploaded])
 
   useEffect(() => {
-    setDatasetFile(null)
+    setDatasetMeta(null)
     setDatasetUploaded(false)
   }, [modelType])
 
-  const handleFileReady = (file) => {
-    setDatasetFile(file)
+  const handleFileReady = async (file) => {
+    setDatasetMeta(null)
+
+    const meta = await new Promise((resolve, reject) => {
+      let rowCount = 0
+      let header = null
+      Papa.parse(file, {
+        header: false,
+        skipEmptyLines: true,
+        worker: true,
+        step: (results) => {
+          const row = results.data
+          if (!header) {
+            header = row
+          } else {
+            rowCount += 1
+          }
+        },
+        complete: () => {
+          if (!Array.isArray(header) || header.length < 2) {
+            reject(new Error('Malformed CSV: expected header with at least 2 columns'))
+            return
+          }
+          const columnNames = header.map((c) => String(c).trim())
+          const numFeatures = Math.max(0, columnNames.length - 1)
+          resolve({
+            totalRows: rowCount,
+            numFeatures,
+            columnNames: JSON.stringify(columnNames),
+          })
+        },
+        error: (err) => reject(err),
+      })
+    })
+
+    console.log('[training] extracted CSV metadata:', meta)
+    setDatasetMeta(meta)
     setDatasetUploaded(true)
   }
 
   const handleStart = async () => {
     setStartLoading(true)
     setTrainingError(null)
-    await startTraining({ modelType, config, datasetFile })
+    const cnnMeta =
+      modelType === 'CNN'
+        ? {
+            datasetPath: 'mnist.zip',
+            totalRows: null,
+            numFeatures: null,
+            columnNames: null,
+            datasetHash: null,
+          }
+        : null
+
+    await startTraining({ modelType, config, datasetMeta: modelType === 'CNN' ? cnnMeta : datasetMeta })
     setStartLoading(false)
   }
 

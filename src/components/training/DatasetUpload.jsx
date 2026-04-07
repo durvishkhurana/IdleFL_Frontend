@@ -9,8 +9,8 @@ export default function DatasetUpload({ onFileReady, modelType, className = '' }
   const [error, setError] = useState(null)
   const [uploaded, setUploaded] = useState(false)
 
-  const acceptedExt = modelType === 'CNN' ? '.zip' : '.csv'
-  const acceptedDesc = modelType === 'CNN' ? 'ZIP archive' : 'CSV file'
+  const acceptedExt = '.csv'
+  const acceptedDesc = 'CSV file'
 
   const processFile = useCallback(async (f) => {
     setError(null)
@@ -41,6 +41,19 @@ export default function DatasetUpload({ onFileReady, modelType, className = '' }
   const onFileChange = (e) => {
     const f = e.target.files[0]
     if (f) processFile(f)
+  }
+
+  if (modelType === 'CNN') {
+    return (
+      <div className={clsx('flex flex-col gap-2', className)}>
+        <div className="rounded-lg p-4 bg-[rgba(255,107,107,0.03)] border border-[rgba(255,107,107,0.2)]">
+          <div className="text-xs font-bold text-white font-mono mb-1">CNN Dataset</div>
+          <div className="text-xs font-mono text-[#555]">
+            Using MNIST (built-in). No file upload required.
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -85,7 +98,7 @@ export default function DatasetUpload({ onFileReady, modelType, className = '' }
 
       <div className="text-xs text-[#444] font-mono">
         Accepted: <span style={{ color: '#ff6b6b' }}>{acceptedExt}</span>
-        {modelType === 'CNN' ? ' — ZIP with train/test image folders' : ' — tabular data with header row'}
+        {' — tabular data with header row'}
       </div>
 
       {error && <div className="text-xs text-[#ff4444] font-mono">{error}</div>}

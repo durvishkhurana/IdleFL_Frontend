@@ -1,14 +1,15 @@
 import api from './axiosInstance'
 
-export const startTraining = ({ sessionId, modelType, config, datasetFile }) => {
-  const formData = new FormData()
-  formData.append('sessionId', sessionId)
-  formData.append('modelType', modelType)
-  if (config.learningRate != null) formData.append('learningRate', String(config.learningRate))
-  if (config.numRounds != null) formData.append('numRounds', String(config.numRounds))
-  if (config.batchSize != null) formData.append('batchSize', String(config.batchSize))
-  if (datasetFile) formData.append('dataset', datasetFile)
-  return api.post('/api/training/start', formData)
+export const startTraining = ({ sessionId, modelType, config, datasetMeta }) => {
+  return api.post('/api/training/start', {
+    sessionId,
+    modelType,
+    learningRate: config.learningRate,
+    numRounds: config.numRounds,
+    batchSize: config.batchSize,
+    ...(config.mu != null && { mu: config.mu }),
+    ...(datasetMeta || {}),
+  })
 }
 
 export const getResults = (jobId) =>

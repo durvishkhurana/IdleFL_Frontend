@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { formatDuration } from '../../utils/formatters'
 
 export default function RoundProgress({
@@ -8,29 +8,25 @@ export default function RoundProgress({
   participatingDevices,
   assignedDevices,
 }) {
-  const sessionStartRef = useRef(null)
-  const roundStartRef = useRef(null)
-  const [, setTick] = useState(0)
+  const [sessionStartMs, setSessionStartMs] = useState(null)
+  const [nowMs, setNowMs] = useState(null)
 
   useEffect(() => {
-    if (sessionStartRef.current == null) {
-      sessionStartRef.current = Date.now()
-    }
+    const now = Date.now()
+    if (sessionStartMs == null) setSessionStartMs(now)
+    if (nowMs == null) setNowMs(now)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => {
-    roundStartRef.current = Date.now()
-  }, [currentRound])
-
-  useEffect(() => {
     if (currentRound <= 0 || currentRound >= totalRounds) return
-    const id = setInterval(() => setTick((t) => t + 1), 1000)
+    const id = setInterval(() => setNowMs(Date.now()), 1000)
     return () => clearInterval(id)
   }, [currentRound, totalRounds])
 
   let etaSeconds = null
-  if (currentRound > 0 && currentRound < totalRounds && sessionStartRef.current != null) {
-    const timeSinceStartSec = (Date.now() - sessionStartRef.current) / 1000
+  if (currentRound > 0 && currentRound < totalRounds && sessionStartMs != null && nowMs != null) {
+    const timeSinceStartSec = (nowMs - sessionStartMs) / 1000
     const avgRoundDuration = timeSinceStartSec / currentRound
     etaSeconds = avgRoundDuration * (totalRounds - currentRound)
   }

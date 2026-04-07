@@ -12,8 +12,8 @@ export function useTraining() {
 
   const isTraining = job.status === 'training'
 
-  const startTraining = async ({ modelType, config, datasetFile }) => {
-    if (!datasetFile) {
+  const startTraining = async ({ modelType, config, datasetMeta }) => {
+    if (modelType !== 'CNN' && !datasetMeta) {
       setError('Please select a dataset file first.')
       return { success: false, error: 'Please select a dataset file first.', validationFailed: true }
     }
@@ -21,7 +21,7 @@ export function useTraining() {
     setStartLoading(true)
     setError(null)
     try {
-      const res = await startTrainingApi({ sessionId, modelType, config, datasetFile })
+      const res = await startTrainingApi({ sessionId, modelType, config, datasetMeta })
       const jobId = res.data.job?.id ?? res.data.jobId
       console.log('[training] jobId from start API:', jobId)
       startJob(jobId, modelType, config.numRounds ?? 10)
