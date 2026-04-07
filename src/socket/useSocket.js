@@ -60,6 +60,7 @@ export function useSocket() {
         ...(data?.jobId != null && data.jobId !== '' && { jobId: data.jobId }),
         ...(data?.modelType && { modelType: data.modelType }),
         ...(data?.numRounds != null && Number.isFinite(Number(data.numRounds)) && { totalRounds: Number(data.numRounds) }),
+        ...(data?.mu != null && Number.isFinite(Number(data.mu)) && { mu: Number(data.mu) }),
       }))
     }
 

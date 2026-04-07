@@ -1,7 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { formatDuration } from '../../utils/formatters'
 
-export default function RoundProgress({ currentRound = 0, totalRounds = 10, statusText }) {
+export default function RoundProgress({
+  currentRound = 0,
+  totalRounds = 10,
+  statusText,
+  participatingDevices,
+  assignedDevices,
+}) {
   const sessionStartRef = useRef(null)
   const roundStartRef = useRef(null)
   const [, setTick] = useState(0)
@@ -36,6 +42,12 @@ export default function RoundProgress({ currentRound = 0, totalRounds = 10, stat
 
   const pct = totalRounds > 0 ? (currentRound / totalRounds) * 100 : 0
 
+  const hasParticipation =
+    participatingDevices != null &&
+    assignedDevices != null &&
+    Number.isFinite(Number(participatingDevices)) &&
+    Number.isFinite(Number(assignedDevices))
+
   return (
     <div className="bg-[#111118] border border-[rgba(0,255,136,0.15)] rounded-lg p-5">
       {/* Round number */}
@@ -46,6 +58,24 @@ export default function RoundProgress({ currentRound = 0, totalRounds = 10, stat
             <span className="text-[#00ff88]">{String(currentRound).padStart(2, '0')}</span>
             <span className="text-[#444]"> / {totalRounds}</span>
           </div>
+          {hasParticipation && (
+            <div className="mt-1 text-xs font-mono text-[#555]">
+              {Number(participatingDevices)} / {Number(assignedDevices)} devices contributed
+              <span className="ml-2">
+                {Number(participatingDevices) === Number(assignedDevices) ? (
+                  <span className="bg-green-500 text-white text-xs px-2 py-0.5 rounded-full">Full round</span>
+                ) : Number(participatingDevices) >= Number(assignedDevices) * 0.7 ? (
+                  <span className="bg-yellow-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    {Number(participatingDevices)}/{Number(assignedDevices)}
+                  </span>
+                ) : (
+                  <span className="bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full">
+                    {Number(participatingDevices)}/{Number(assignedDevices)}
+                  </span>
+                )}
+              </span>
+            </div>
+          )}
         </div>
         <div className="text-right">
           <span className="text-xs text-[#555] uppercase tracking-widest">ETA</span>

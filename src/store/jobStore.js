@@ -3,6 +3,7 @@ import { create } from 'zustand'
 const useJobStore = create((set) => ({
   jobId: null,
   modelType: null,
+  mu: null,
   status: 'idle', // idle | training | complete | error
   lossHistory: [],
   accuracyHistory: [],
@@ -10,6 +11,8 @@ const useJobStore = create((set) => ({
   totalRounds: 10,
   estimatedTimeRemaining: null,
   deviceContributions: [],
+  participatingDevices: null,
+  assignedDevices: null,
   startedAt: null,
   completedAt: null,
   finalAccuracy: null,
@@ -18,6 +21,7 @@ const useJobStore = create((set) => ({
     set({
       jobId,
       modelType,
+      mu: null,
       status: 'training',
       lossHistory: [],
       accuracyHistory: [],
@@ -28,13 +32,15 @@ const useJobStore = create((set) => ({
       finalAccuracy: null,
     }),
 
-  updateRound: ({ round, loss, accuracy, deviceContributions, estimatedTimeRemaining }) =>
+  updateRound: ({ round, loss, accuracy, deviceContributions, estimatedTimeRemaining, participatingDevices, assignedDevices }) =>
     set((state) => ({
       roundsCompleted: round,
       lossHistory: [...state.lossHistory, loss],
       accuracyHistory: [...state.accuracyHistory, accuracy],
       deviceContributions: deviceContributions || state.deviceContributions,
       estimatedTimeRemaining: estimatedTimeRemaining ?? state.estimatedTimeRemaining,
+      participatingDevices: participatingDevices ?? state.participatingDevices,
+      assignedDevices: assignedDevices ?? state.assignedDevices,
     })),
 
   completeJob: (finalAccuracy) =>

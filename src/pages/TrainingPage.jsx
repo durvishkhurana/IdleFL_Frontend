@@ -369,7 +369,15 @@ export default function TrainingPage() {
         <RoundProgress
           currentRound={job.roundsCompleted}
           totalRounds={job.totalRounds}
+          participatingDevices={job.participatingDevices}
+          assignedDevices={job.assignedDevices}
         />
+
+        <div className="mt-2 text-xs font-mono text-[#555]">
+          {job.mu != null && Number(job.mu) > 0
+            ? `Regularization: FedProx (μ=${job.mu})`
+            : 'Regularization: FedAvg'}
+        </div>
 
         <div className="flex flex-col lg:flex-row gap-4 mt-4">
           <div className="flex-1" style={{ minHeight: 340 }}>
