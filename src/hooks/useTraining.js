@@ -13,8 +13,7 @@ export function useTraining() {
   const isTraining = job.status === 'training'
 
   const startTraining = async ({ modelType, config, datasetFile }) => {
-    const demo = import.meta.env.VITE_DEMO_MODE === 'true'
-    if (!demo && !datasetFile) {
+    if (!datasetFile) {
       setError('Please select a dataset file first.')
       return { success: false, error: 'Please select a dataset file first.', validationFailed: true }
     }

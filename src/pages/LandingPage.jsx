@@ -249,7 +249,7 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── DEMO VIDEO ────────────────────────────────────────────── */}
+      {/* ── Feature / hero media ─────────────────────────────────── */}
       <section className="py-16 px-6 max-w-4xl mx-auto">
         <h2 className="text-2xl font-medium mb-3 text-white">See it in action</h2>
         <p className="text-sm mb-6" style={{ color: '#8a5555' }}>

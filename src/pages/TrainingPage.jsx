@@ -15,37 +15,9 @@ import { useTraining } from '../hooks/useTraining'
 import { downloadModel } from '../api/training.api'
 import { useDevices } from '../hooks/useDevices'
 import { useSocket } from '../socket/useSocket'
-import useJobStore from '../store/jobStore'
 import useSessionStore from '../store/sessionStore'
 import { formatDuration, formatScore } from '../utils/formatters'
-import { DEMO_MODE, DEMO_DEVICES, generateDemoTrainingData } from '../utils/demoMode'
 import { Link } from 'react-router-dom'
-import clsx from 'clsx'
-
-/* ─── Dev mock training playback ──────────────────────────── */
-function useMockTraining() {
-  const { updateRound, completeJob } = useJobStore()
-  const [mockRunning, setMockRunning] = useState(false)
-
-  const startMock = (totalRounds = 10) => {
-    const data = generateDemoTrainingData(totalRounds)
-    setMockRunning(true)
-    let i = 0
-    const interval = setInterval(() => {
-      updateRound(data[i])
-      useSessionStore.getState().updateTrainingProgress(data[i].round, totalRounds)
-      i++
-      if (i >= data.length) {
-        clearInterval(interval)
-        setMockRunning(false)
-        completeJob(data[data.length - 1].accuracy)
-      }
-    }, 900)
-    return () => clearInterval(interval)
-  }
-
-  return { startMock, mockRunning }
-}
 
 /* ─── Round flash callout ─────────────────────────────────── */
 function RoundFlash({ round }) {
@@ -115,9 +87,6 @@ export default function TrainingPage() {
   const { job, startTraining, resetJob, error: trainingError, setError: setTrainingError } = useTraining()
   const { devices, hasMajorityCpuOnly } = useDevices()
   const sessionId = useSessionStore((s) => s.sessionId)
-  const connectedDevices = useSessionStore((s) => s.connectedDevices)
-  const { startMock, mockRunning } = useMockTraining()
-
   const [modelType, setModelType] = useState('LINEAR_REGRESSION')
   const [config, setConfig] = useState({ learningRate: 0.01, numRounds: 10, batchSize: 32 })
   const [datasetFile, setDatasetFile] = useState(null)
@@ -127,17 +96,11 @@ export default function TrainingPage() {
   const [modelDownloadLoading, setModelDownloadLoading] = useState(false)
   const [modelDownloadError, setModelDownloadError] = useState(null)
 
-  // Show sticky bar when dataset selected (or demo mode)
   useEffect(() => {
-    setShowStickyBar(datasetUploaded || DEMO_MODE)
+    setShowStickyBar(datasetUploaded)
   }, [datasetUploaded])
 
   useEffect(() => {
-    if (DEMO_MODE) setDatasetUploaded(true)
-  }, [])
-
-  useEffect(() => {
-    if (DEMO_MODE) return
     setDatasetFile(null)
     setDatasetUploaded(false)
   }, [modelType])
@@ -150,12 +113,7 @@ export default function TrainingPage() {
   const handleStart = async () => {
     setStartLoading(true)
     setTrainingError(null)
-    const res = await startTraining({ modelType, config, datasetFile })
-    if (!res.success && !res.validationFailed) {
-      const { startJob } = useJobStore.getState()
-      startJob(`JOB-${Date.now()}`, modelType, config.numRounds)
-      startMock(config.numRounds)
-    }
+    await startTraining({ modelType, config, datasetFile })
     setStartLoading(false)
   }
 
@@ -364,7 +322,7 @@ export default function TrainingPage() {
         {!showStickyBar && (
           <div className="mt-4 flex flex-col items-center gap-2">
             {trainingError && <p className="text-xs font-mono" style={{ color: '#ff4444' }}>{trainingError}</p>}
-            <Button variant="primary" size="lg" loading={startLoading || mockRunning} onClick={handleStart} className="min-w-[220px]">
+            <Button variant="primary" size="lg" loading={startLoading} onClick={handleStart} className="min-w-[220px]">
               ▶ Start Training
             </Button>
             <p className="text-xs font-mono" style={{ color: '#4a2a2a' }}>Upload a dataset to enable training</p>
@@ -389,7 +347,7 @@ export default function TrainingPage() {
               <span>·</span>
               <span>{config.numRounds} rounds · lr={config.learningRate}</span>
             </div>
-            <Button variant="primary" size="md" loading={startLoading || mockRunning} onClick={handleStart}>
+            <Button variant="primary" size="md" loading={startLoading} onClick={handleStart}>
               ▶ Start Training
             </Button>
           </div>
@@ -419,11 +377,7 @@ export default function TrainingPage() {
           </div>
 
           <div className="w-full lg:w-[300px] flex flex-col gap-3">
-            <DeviceContribution
-              deviceContributions={job.deviceContributions}
-              devices={devices}
-              connectedDevices={connectedDevices}
-            />
+            <DeviceContribution deviceContributions={job.deviceContributions} devices={devices} />
             <div
               className="rounded-lg p-4"
               style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}
@@ -464,7 +418,14 @@ export default function TrainingPage() {
             { label: 'Final Accuracy', value: formatScore(job.finalAccuracy), color: '#ff6b6b' },
             { label: 'Total Rounds',   value: `${job.roundsCompleted}`,       color: '#00d4ff' },
             { label: 'Total Time',     value: totalTime ? formatDuration(totalTime) : '—', color: '#a78bfa' },
-            { label: 'Devices Used',   value: `${job.deviceContributions?.length || devices.length}`, color: '#00ff88' },
+            {
+            label: 'Devices Used',
+            value:
+              job.deviceContributions?.length > 0
+                ? `${job.deviceContributions.length}`
+                : '—',
+            color: '#00ff88',
+          },
           ].map(s => (
             <div key={s.label} className="rounded-lg p-4 text-center" style={{ background: 'var(--surface)', border: '1px solid var(--border)' }}>
               <div className="text-2xl font-bold font-mono mb-1" style={{ color: s.color }}>{s.value}</div>

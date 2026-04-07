@@ -12,7 +12,6 @@ const NAV_LINKS = [
 ]
 
 const HIDE_NAV_ON = ['/', '/auth']
-const DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true'
 
 export default function Navbar() {
   const location = useLocation()
@@ -41,11 +40,6 @@ export default function Navbar() {
 
   return (
     <>
-      {DEMO_MODE && (
-        <div className="demo-banner px-4 py-1.5 text-center text-xs font-mono text-[#ffaa00]">
-          ⚠ DEMO MODE — Mock data only. Connect real devices for actual training.
-        </div>
-      )}
       <nav
         className="sticky top-0 z-40 flex items-center justify-between px-6 transition-all duration-300"
         style={{

@@ -19,32 +19,23 @@ function enrichContributions(deviceContributions, devices) {
   })
 }
 
-/** Prefer socket shard sizes; otherwise one equal bar per connected device (~100/n % each). */
-function buildShardRows(deviceContributions, devices, connectedDevices) {
+/** Only show rows when the server has reported real shard sizes (training:round_complete). */
+function buildShardRows(deviceContributions, devices) {
   const enriched = enrichContributions(deviceContributions, devices)
   const hasRealSamples = enriched.some((r) => (r.samples || 0) > 0)
-  if (hasRealSamples) return enriched
-
-  const alive = (connectedDevices || []).filter((d) => d.status !== 'dropped')
-  if (alive.length === 0) return []
-
-  return alive.map((d) => ({
-    deviceId: d.deviceId,
-    name: d.deviceName,
-    computeType: d.computeType,
-    os: d.os,
-    samples: 1,
-  }))
+  return hasRealSamples ? enriched : []
 }
 
-export default function DeviceContribution({ deviceContributions = [], devices = [], connectedDevices = [] }) {
-  const rows = buildShardRows(deviceContributions, devices, connectedDevices)
+export default function DeviceContribution({ deviceContributions = [], devices = [] }) {
+  const rows = buildShardRows(deviceContributions, devices)
 
   if (!rows.length) {
     return (
       <div className="bg-[#111118] border border-[rgba(0,255,136,0.15)] rounded-lg p-4">
         <h3 className="text-xs font-bold text-[#555] font-mono uppercase tracking-widest mb-2">Data Shards</h3>
-        <div className="text-xs text-[#333] font-mono italic">No contribution data yet</div>
+        <div className="text-xs text-[#333] font-mono italic">
+          Shard sizes appear after the first completed FedAvg round (from real device contributions).
+        </div>
       </div>
     )
   }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import PageWrapper from '../components/layout/PageWrapper'
 import SessionInfo from '../components/session/SessionInfo'
@@ -12,11 +12,10 @@ import { useSocket } from '../socket/useSocket'
 import useSessionStore from '../store/sessionStore'
 import useAuthStore from '../store/authStore'
 import { createSession, joinSession } from '../api/session.api'
-import { DEMO_MODE, DEMO_DEVICES } from '../utils/demoMode'
 
 export default function SessionPage() {
   const navigate = useNavigate()
-  const { sessionId, sessionCode, setSession, addDevice } = useSessionStore()
+  const { sessionId, sessionCode, setSession } = useSessionStore()
   const { user } = useAuthStore()
   const { devices, hasMajorityCpuOnly, hasGpuDevice } = useDevices()
   useSocket()
@@ -27,29 +26,6 @@ export default function SessionPage() {
   const [error, setError] = useState(null)
   const [createdSessionId, setCreatedSessionId] = useState(null)
   const [copied, setCopied] = useState(false)
-
-  // Demo mode: inject mock devices
-  useEffect(() => {
-    if (DEMO_MODE && sessionId === 'FL-DEMO') {
-      DEMO_DEVICES.forEach(d => addDevice(d))
-    }
-  }, [sessionId])
-
-  // Simulate device stats random walk in demo mode
-  useEffect(() => {
-    if (!DEMO_MODE || !sessionId) return
-    const { updateDevice } = useSessionStore.getState()
-    const interval = setInterval(() => {
-      DEMO_DEVICES.forEach(d => {
-        updateDevice(d.deviceId, {
-          cpuUsage:     Math.max(0.05, Math.min(0.95, (d.cpuUsage || 0.3) + (Math.random() - 0.5) * 0.08)),
-          freeRamRatio: Math.max(0.1,  Math.min(0.9,  (d.freeRamRatio || 0.5) + (Math.random() - 0.5) * 0.04)),
-          gpuUsage:     d.hasGpu ? Math.max(0.1, Math.min(0.95, (d.gpuUsage || 0.4) + (Math.random() - 0.5) * 0.06)) : null,
-        })
-      })
-    }, 2000)
-    return () => clearInterval(interval)
-  }, [sessionId])
 
   const copySessionId = (id) => {
     navigator.clipboard.writeText(id).then(() => {
