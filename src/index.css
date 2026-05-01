@@ -18,6 +18,7 @@
 }
 
 :root {
+  --font-mono: 'JetBrains Mono', monospace;
   --accent:       #ff6b6b;
   --accent-dim:   #cc3333;
   --accent-glow:  rgba(255, 107, 107, 0.15);
@@ -260,4 +261,43 @@ body {
 .demo-banner {
   background: rgba(255,170,0,0.1);
   border-bottom: 1px solid rgba(255,170,0,0.3);
+}
+
+/* Technical / infra callouts (training disclaimer, system notes) */
+.badge-tech-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  font-family: var(--font-mono);
+  font-size: 0.625rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cyan);
+  background: rgba(0, 212, 255, 0.1);
+  border: 1px solid rgba(0, 212, 255, 0.35);
+  border-radius: 4px;
+}
+
+.infra-brief-callout {
+  border-radius: 8px;
+  padding: 0.875rem 1rem;
+  background: rgba(255, 170, 0, 0.06);
+  border: 1px solid rgba(255, 170, 0, 0.28);
+  border-left: 3px solid var(--amber);
+  box-shadow: 0 0 0 1px rgba(255, 107, 107, 0.06);
+}
+
+.infra-brief-callout p {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.infra-brief-callout strong {
+  color: var(--amber);
+  font-weight: 600;
 }

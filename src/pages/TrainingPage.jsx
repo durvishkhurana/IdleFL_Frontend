@@ -39,6 +39,23 @@ function RoundFlash({ round }) {
   )
 }
 
+/* ─── Infrastructure / deployment disclaimer ───────────────── */
+function InfrastructureBrief({ className = '' }) {
+  return (
+    <div className={`infra-brief-callout ${className}`} role="note">
+      <div className="flex items-center gap-2 mb-2 flex-wrap">
+        <span className="badge-tech-info">Technical Info</span>
+      </div>
+      <p>
+        <strong>Technical Note:</strong>{' '}
+        This deployment utilizes free-tier cloud instances. While the Federated Learning architecture is fully functional,
+        large model weight transfers (CNNs) may experience latency due to cloud bandwidth throttling. Tabular models are
+        recommended for rapid demonstration.
+      </p>
+    </div>
+  )
+}
+
 /* ─── Empty devices panel ─────────────────────────────────── */
 function EmptyDevicesGuide({ sessionId }) {
   return (
@@ -322,6 +339,7 @@ export default function TrainingPage() {
                 onChange={setModelType}
                 hasCpuDevices={hasMajorityCpuOnly}
               />
+              <InfrastructureBrief className="mt-4" />
             </div>
 
             <div
@@ -374,12 +392,17 @@ export default function TrainingPage() {
               boxShadow: '0 -4px 20px rgba(255,107,107,0.1)',
             }}
           >
-            <div className="flex items-center gap-4 text-xs font-mono" style={{ color: '#8a5555' }}>
-              <span style={{ color: '#ff6b6b' }}>✓ Dataset ready</span>
-              <span>·</span>
-              <span style={{ color: '#ffe8e8' }}>{modelType.replace(/_/g, ' ')}</span>
-              <span>·</span>
-              <span>{config.numRounds} rounds · lr={config.learningRate}</span>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0 flex-1">
+              <div className="flex items-center gap-4 text-xs font-mono shrink-0" style={{ color: '#8a5555' }}>
+                <span style={{ color: '#ff6b6b' }}>✓ Dataset ready</span>
+                <span>·</span>
+                <span style={{ color: '#ffe8e8' }}>{modelType.replace(/_/g, ' ')}</span>
+                <span>·</span>
+                <span>{config.numRounds} rounds · lr={config.learningRate}</span>
+              </div>
+              <div className="hidden lg:block min-w-0 max-w-xl flex-1">
+                <InfrastructureBrief className="!py-2 !px-3" />
+              </div>
             </div>
             <Button variant="primary" size="md" loading={startLoading} onClick={handleStart}>
               ▶ Start Training
